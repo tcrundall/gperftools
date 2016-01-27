@@ -30,7 +30,7 @@
 
 // ---
 // Author: Ken Ashcraft <opensource@google.com>
-
+#include <stdio.h>
 #include <config.h>
 #include "thread_cache.h"
 #include <errno.h>
@@ -119,8 +119,11 @@ void* ThreadCache::FetchFromCentralCache(size_t cl, size_t byte_size) {
   FreeList* list = &list_[cl];
   ASSERT(list->empty());
   const int batch_size = Static::sizemap()->num_objects_to_move(cl);
+//  printf("Batch_size: %d\n", batch_size);
 
-  const int num_to_move = min<int>(list->max_length(), batch_size);
+  int num_in_cache_line = max (1, 64 / (int) byte_size);
+
+  const int num_to_move = max(min<int>(list->max_length(), batch_size), num_in_cache_line);
   void *start, *end;
   int fetch_count = Static::central_cache()[cl].RemoveRange(
       &start, &end, num_to_move);
@@ -130,13 +133,13 @@ void* ThreadCache::FetchFromCentralCache(size_t cl, size_t byte_size) {
     size_ += byte_size * fetch_count;
     list->PushRange(fetch_count, SLL_Next(start), end);
   }
-
+//  printf("num_to_move: %d\n", num_to_move);
   // Increase max length slowly up to batch_size.  After that,
   // increase by batch_size in one shot so that the length is a
   // multiple of batch_size.
-  if (list->max_length() < batch_size) {
-    list->set_max_length(list->max_length() + 1);
-  } else {
+//  if (list->max_length() < batch_size) {
+//    list->set_max_length(list->max_length() + 1);
+//  } else {
     // Don't let the list get too long.  In 32 bit builds, the length
     // is represented by a 16 bit int, so we need to watch out for
     // integer overflow.
@@ -148,7 +151,7 @@ void* ThreadCache::FetchFromCentralCache(size_t cl, size_t byte_size) {
     new_length -= new_length % batch_size;
     ASSERT(new_length % batch_size == 0);
     list->set_max_length(new_length);
-  }
+//  }
   return start;
 }
 
