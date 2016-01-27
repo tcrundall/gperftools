@@ -1,3 +1,7 @@
+# mine
+/build
+/.idea
+
 *.[oa]
 *.la
 *.lo
